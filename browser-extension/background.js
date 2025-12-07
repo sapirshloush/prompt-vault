@@ -1,6 +1,6 @@
 // PromptVault Browser Extension - Background Script
 
-const API_URL = 'https://sap-prompt-vault.vercel.app';
+const API_URL = 'https://prompt-vault-ebon-psi.vercel.app';
 
 // Create context menu on install
 chrome.runtime.onInstalled.addListener(() => {

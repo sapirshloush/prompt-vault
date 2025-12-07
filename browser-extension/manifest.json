@@ -9,7 +9,7 @@
     "activeTab"
   ],
   "host_permissions": [
-    "https://sap-prompt-vault.vercel.app/*"
+    "https://prompt-vault-ebon-psi.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js"
