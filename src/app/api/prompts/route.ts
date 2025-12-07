@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('query');
     const source = searchParams.get('source');
     const category_id = searchParams.get('category_id');
+    const collection_id = searchParams.get('collection_id');
     const is_favorite = searchParams.get('is_favorite');
     const tags = searchParams.get('tags')?.split(',').filter(Boolean);
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         category:categories(*),
+        collection:collections(*),
         tags:prompt_tags(tag:tags(*))
       `)
       .order('updated_at', { ascending: false })
@@ -52,6 +54,10 @@ export async function GET(request: NextRequest) {
     
     if (category_id) {
       dbQuery = dbQuery.eq('category_id', category_id);
+    }
+    
+    if (collection_id) {
+      dbQuery = dbQuery.eq('collection_id', collection_id);
     }
     
     if (is_favorite === 'true') {
@@ -106,7 +112,7 @@ export async function POST(request: NextRequest) {
     
     const body: CreatePromptRequest = await request.json();
 
-    const { title, content, source, category_id, effectiveness_score, tags, is_favorite } = body;
+    const { title, content, source, category_id, collection_id, effectiveness_score, tags, is_favorite } = body;
 
     if (!title || !content || !source) {
       return NextResponse.json(
@@ -123,6 +129,7 @@ export async function POST(request: NextRequest) {
         content,
         source,
         category_id: category_id || null,
+        collection_id: collection_id || null,
         effectiveness_score: effectiveness_score || null,
         is_favorite: is_favorite || false,
         current_version: 1,

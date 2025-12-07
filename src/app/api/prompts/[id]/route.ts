@@ -55,7 +55,7 @@ export async function PATCH(
     const supabase = await createClient();
     const body: UpdatePromptRequest = await request.json();
 
-    const { title, content, source, category_id, effectiveness_score, is_favorite, change_notes } = body;
+    const { title, content, source, category_id, collection_id, effectiveness_score, is_favorite, change_notes } = body;
 
     // Get current prompt
     const { data: currentPrompt, error: fetchError } = await supabase
@@ -81,6 +81,7 @@ export async function PATCH(
     if (content !== undefined) updateData.content = content;
     if (source !== undefined) updateData.source = source;
     if (category_id !== undefined) updateData.category_id = category_id;
+    if (collection_id !== undefined) updateData.collection_id = collection_id;
     if (effectiveness_score !== undefined) updateData.effectiveness_score = effectiveness_score;
     if (is_favorite !== undefined) updateData.is_favorite = is_favorite;
     if (contentChanged) updateData.current_version = newVersion;

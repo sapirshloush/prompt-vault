@@ -2,6 +2,20 @@
 
 export type Source = 'chatgpt' | 'gemini' | 'claude' | 'nano_banana' | 'cursor' | 'other';
 
+export interface Collection {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  color: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+  // Computed
+  prompt_count?: number;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -36,6 +50,7 @@ export interface Prompt {
   content: string;
   source: Source;
   category_id: string | null;
+  collection_id: string | null;
   effectiveness_score: number | null;
   use_count: number;
   is_favorite: boolean;
@@ -44,6 +59,7 @@ export interface Prompt {
   current_version: number;
   // Relations (when joined)
   category?: Category;
+  collection?: Collection;
   tags?: Tag[];
   versions?: PromptVersion[];
 }
@@ -59,6 +75,7 @@ export interface CreatePromptRequest {
   content: string;
   source: Source;
   category_id?: string;
+  collection_id?: string;
   effectiveness_score?: number;
   tags?: string[]; // Tag names
   is_favorite?: boolean;
@@ -69,6 +86,7 @@ export interface UpdatePromptRequest {
   content?: string;
   source?: Source;
   category_id?: string;
+  collection_id?: string;
   effectiveness_score?: number;
   is_favorite?: boolean;
   change_notes?: string; // For version control
@@ -78,10 +96,28 @@ export interface SearchPromptsRequest {
   query?: string;
   source?: Source;
   category_id?: string;
+  collection_id?: string;
   tags?: string[];
   is_favorite?: boolean;
   limit?: number;
   offset?: number;
+}
+
+// Collection Request Types
+export interface CreateCollectionRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_public?: boolean;
+}
+
+export interface UpdateCollectionRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_public?: boolean;
 }
 
 // Source display info

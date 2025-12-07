@@ -22,7 +22,8 @@ import {
 import { PromptCard } from '@/components/PromptCard';
 import { PromptDialog } from '@/components/PromptDialog';
 import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
-import { Prompt, Category, Tag, Source, SOURCE_INFO } from '@/types/database';
+import { CollectionDialog } from '@/components/CollectionDialog';
+import { Prompt, Category, Tag, Collection, Source, SOURCE_INFO } from '@/types/database';
 import { 
   Search, 
   Plus, 
@@ -33,7 +34,12 @@ import {
   List,
   Vault,
   LogOut,
-  User
+  User,
+  FolderPlus,
+  Folder,
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export default function Home() {
@@ -46,6 +52,7 @@ export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +60,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [collectionFilter, setCollectionFilter] = useState<string>('all');
   const [showFavorites, setShowFavorites] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -62,6 +70,8 @@ export default function Home() {
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const [versionPrompt, setVersionPrompt] = useState<Prompt | null>(null);
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
 
   // Get current user
   useEffect(() => {
@@ -85,6 +95,7 @@ export default function Home() {
       if (searchQuery) params.set('query', searchQuery);
       if (sourceFilter !== 'all') params.set('source', sourceFilter);
       if (categoryFilter !== 'all') params.set('category_id', categoryFilter);
+      if (collectionFilter !== 'all') params.set('collection_id', collectionFilter);
       if (showFavorites) params.set('is_favorite', 'true');
       if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
 
@@ -95,7 +106,19 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load prompts');
     }
-  }, [searchQuery, sourceFilter, categoryFilter, showFavorites, selectedTags]);
+  }, [searchQuery, sourceFilter, categoryFilter, collectionFilter, showFavorites, selectedTags]);
+
+  const fetchCollections = async () => {
+    try {
+      const res = await fetch('/api/collections');
+      if (res.ok) {
+        const data = await res.json();
+        setCollections(data.collections || []);
+      }
+    } catch (err) {
+      console.error('Error fetching collections:', err);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -122,7 +145,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    Promise.all([fetchPrompts(), fetchCategories(), fetchTags()])
+    Promise.all([fetchPrompts(), fetchCategories(), fetchTags(), fetchCollections()])
       .finally(() => setLoading(false));
   }, [fetchPrompts]);
 
@@ -132,6 +155,7 @@ export default function Home() {
     content: string;
     source: Source;
     category_id?: string;
+    collection_id?: string;
     effectiveness_score?: number;
     tags?: string[];
     is_favorite?: boolean;
@@ -210,6 +234,28 @@ export default function Home() {
         ? prev.filter(t => t !== tagName)
         : [...prev, tagName]
     );
+  };
+
+  // Collection handlers
+  const handleEditCollection = (collection: Collection) => {
+    setEditingCollection(collection);
+    setCollectionDialogOpen(true);
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    if (!confirm('Delete this collection? Prompts will be moved to "All Prompts".')) return;
+    
+    try {
+      const res = await fetch(`/api/collections/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchCollections();
+        if (collectionFilter === id) {
+          setCollectionFilter('all');
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting collection:', err);
+    }
   };
 
   // Stats
@@ -295,6 +341,88 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Collections Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-zinc-400 flex items-center gap-2">
+              <Folder className="w-4 h-4" />
+              Collections
+            </h2>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setEditingCollection(null);
+                setCollectionDialogOpen(true);
+              }}
+              className="text-zinc-400 hover:text-zinc-100 h-7 px-2"
+            >
+              <FolderPlus className="w-4 h-4 mr-1" />
+              New
+            </Button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-800">
+            {/* All Prompts */}
+            <button
+              onClick={() => setCollectionFilter('all')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                collectionFilter === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+              }`}
+            >
+              📚 All Prompts
+              <span className="ml-2 text-xs opacity-70">{prompts.length}</span>
+            </button>
+            
+            {/* Collections */}
+            {collections.map((collection) => (
+              <div key={collection.id} className="flex-shrink-0 group relative">
+                <button
+                  onClick={() => setCollectionFilter(collection.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    collectionFilter === collection.id
+                      ? 'text-white'
+                      : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  }`}
+                  style={{
+                    backgroundColor: collectionFilter === collection.id ? collection.color : undefined,
+                  }}
+                >
+                  <span>{collection.icon}</span>
+                  <span className="max-w-[120px] truncate">{collection.name}</span>
+                  <span className="text-xs opacity-70">{collection.prompt_count || 0}</span>
+                </button>
+                
+                {/* Collection Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-100 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <MoreHorizontal className="w-3 h-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                    <DropdownMenuItem
+                      onClick={() => handleEditCollection(collection)}
+                      className="text-zinc-300 focus:bg-zinc-800 cursor-pointer"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteCollection(collection.id)}
+                      className="text-red-400 focus:bg-red-950 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
@@ -476,6 +604,7 @@ export default function Home() {
         }}
         prompt={editingPrompt}
         categories={categories}
+        collections={collections}
         existingTags={tags}
         onSave={handleSavePrompt}
       />
@@ -484,6 +613,18 @@ export default function Home() {
         open={versionDialogOpen}
         onOpenChange={setVersionDialogOpen}
         prompt={versionPrompt}
+      />
+
+      <CollectionDialog
+        open={collectionDialogOpen}
+        onOpenChange={(open) => {
+          setCollectionDialogOpen(open);
+          if (!open) setEditingCollection(null);
+        }}
+        collection={editingCollection}
+        onSave={() => {
+          fetchCollections();
+        }}
       />
     </div>
   );

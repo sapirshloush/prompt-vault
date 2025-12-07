@@ -19,20 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Prompt, Category, Tag, Source, SOURCE_INFO } from '@/types/database';
-import { Star, X, Plus } from 'lucide-react';
+import { Prompt, Category, Tag, Collection, Source, SOURCE_INFO } from '@/types/database';
+import { Star, X, Plus, Folder } from 'lucide-react';
 
 interface PromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prompt?: Prompt | null;
   categories: Category[];
+  collections: Collection[];
   existingTags: Tag[];
   onSave: (data: {
     title: string;
     content: string;
     source: Source;
     category_id?: string;
+    collection_id?: string;
     effectiveness_score?: number;
     tags?: string[];
     is_favorite?: boolean;
@@ -45,6 +47,7 @@ export function PromptDialog({
   onOpenChange,
   prompt,
   categories,
+  collections,
   existingTags,
   onSave,
 }: PromptDialogProps) {
@@ -52,6 +55,7 @@ export function PromptDialog({
   const [content, setContent] = useState('');
   const [source, setSource] = useState<Source>('chatgpt');
   const [categoryId, setCategoryId] = useState<string>('none');
+  const [collectionId, setCollectionId] = useState<string>('none');
   const [effectivenessScore, setEffectivenessScore] = useState<number>(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
@@ -67,6 +71,7 @@ export function PromptDialog({
       setContent(prompt.content);
       setSource(prompt.source);
       setCategoryId(prompt.category_id || 'none');
+      setCollectionId(prompt.collection_id || 'none');
       setEffectivenessScore(prompt.effectiveness_score || 0);
       setSelectedTags(prompt.tags?.map(t => t.name) || []);
       setIsFavorite(prompt.is_favorite);
@@ -76,6 +81,7 @@ export function PromptDialog({
       setContent('');
       setSource('chatgpt');
       setCategoryId('none');
+      setCollectionId('none');
       setEffectivenessScore(0);
       setSelectedTags([]);
       setIsFavorite(false);
@@ -106,6 +112,7 @@ export function PromptDialog({
         content: content.trim(),
         source,
         category_id: categoryId === 'none' ? undefined : categoryId,
+        collection_id: collectionId === 'none' ? undefined : collectionId,
         effectiveness_score: effectivenessScore || undefined,
         tags: selectedTags,
         is_favorite: isFavorite,
@@ -197,6 +204,32 @@ export function PromptDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Collection */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300 flex items-center gap-2">
+              <Folder className="w-4 h-4" /> Collection
+            </Label>
+            <Select value={collectionId} onValueChange={setCollectionId}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-100">
+                <SelectValue placeholder="Add to collection..." />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectItem value="none" className="text-zinc-500">
+                  No collection
+                </SelectItem>
+                {collections.map((coll) => (
+                  <SelectItem 
+                    key={coll.id} 
+                    value={coll.id}
+                    className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                  >
+                    {coll.icon} {coll.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Effectiveness Score */}
