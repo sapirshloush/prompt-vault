@@ -17,6 +17,15 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
+  // Get the correct base URL (Vercel or localhost)
+  const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      // Use the actual URL, not localhost if on Vercel
+      return window.location.origin;
+    }
+    return process.env.NEXT_PUBLIC_APP_URL || 'https://prompt-vault-ebon-psi.vercel.app';
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -29,7 +38,7 @@ export default function LoginPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${getBaseUrl()}/auth/callback`,
           },
         });
         if (error) throw error;
@@ -57,7 +66,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${getBaseUrl()}/auth/callback`,
         },
       });
       if (error) throw error;
