@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 
 // CORS headers for browser extension
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const openaiKey = process.env.OPENAI_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
     
-    if (!openaiKey) {
+    if (!geminiKey) {
       // Fallback to basic analysis if no API key
       return NextResponse.json({
         title: generateBasicTitle(content),
@@ -35,11 +35,12 @@ export async function POST(request: NextRequest) {
         category: detectCategory(content),
         effectiveness_score: null,
         ai_powered: false,
-        message: 'Basic analysis (no OpenAI key configured)'
+        message: 'Basic analysis (no Gemini API key configured)'
       }, { headers: corsHeaders });
     }
 
-    const openai = new OpenAI({ apiKey: openaiKey });
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Fetch existing categories from database
     const supabase = await createClient();
@@ -58,44 +59,47 @@ export async function POST(request: NextRequest) {
     
     const existingTagsList = existingTags?.map(t => t.name).join(', ') || '';
 
-    const systemPrompt = `You are an expert prompt analyst. Analyze the given prompt and provide:
+    const prompt = `You are an expert prompt analyst. Analyze the given prompt and provide:
 1. A concise, descriptive title (max 60 characters)
 2. 3-5 relevant tags (lowercase, single words or hyphenated)
 3. The best matching category from: ${categoryList}
 4. An effectiveness score (1-10) based on clarity, specificity, and likely results
-5. A brief reason for your effectiveness score
+5. A brief reason for your effectiveness score (max 100 characters)
 
 Consider existing tags for consistency: ${existingTagsList}
 
 The prompt was written for: ${source || 'unknown AI tool'}
 
-Respond in JSON format only:
-{
-  "title": "string",
-  "tags": ["tag1", "tag2", "tag3"],
-  "category": "Category Name",
-  "effectiveness_score": number,
-  "effectiveness_reason": "string"
-}`;
+IMPORTANT: Respond ONLY with valid JSON, no markdown, no code blocks:
+{"title": "string", "tags": ["tag1", "tag2"], "category": "Category Name", "effectiveness_score": number, "effectiveness_reason": "string"}
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Cost-effective and fast
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Analyze this prompt:\n\n${content.slice(0, 2000)}` }
-      ],
-      temperature: 0.3,
-      max_tokens: 300,
-      response_format: { type: 'json_object' }
-    });
+Analyze this prompt:
+${content.slice(0, 2000)}`;
 
-    const analysisText = response.choices[0]?.message?.content;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const analysisText = response.text().trim();
     
-    if (!analysisText) {
-      throw new Error('No response from OpenAI');
+    // Clean up the response (remove markdown code blocks if present)
+    let cleanedText = analysisText;
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.slice(7);
     }
-
-    const analysis = JSON.parse(analysisText);
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.slice(3);
+    }
+    if (cleanedText.endsWith('```')) {
+      cleanedText = cleanedText.slice(0, -3);
+    }
+    cleanedText = cleanedText.trim();
+    
+    let analysis;
+    try {
+      analysis = JSON.parse(cleanedText);
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', cleanedText);
+      throw new Error('Invalid JSON response from Gemini');
+    }
 
     // Match category to actual category ID
     let categoryId = null;
@@ -120,12 +124,18 @@ Respond in JSON format only:
     console.error('Error in AI analysis:', error);
     
     // Return basic analysis on error
-    const { content, source } = await request.json().catch(() => ({ content: '', source: '' }));
+    let content = '';
+    let source = '';
+    try {
+      const body = await request.clone().json();
+      content = body.content || '';
+      source = body.source || '';
+    } catch {}
     
     return NextResponse.json({
-      title: generateBasicTitle(content || ''),
-      tags: generateBasicTags(content || '', source || ''),
-      category: detectCategory(content || ''),
+      title: generateBasicTitle(content),
+      tags: generateBasicTags(content, source),
+      category: detectCategory(content),
       effectiveness_score: null,
       ai_powered: false,
       error: 'AI analysis failed, using basic analysis'
@@ -133,7 +143,7 @@ Respond in JSON format only:
   }
 }
 
-// Fallback functions when OpenAI is not available
+// Fallback functions when Gemini is not available
 function generateBasicTitle(content: string): string {
   const firstLine = content.split('\n')[0].trim();
   if (firstLine.length <= 60) return firstLine;
@@ -200,4 +210,3 @@ function detectCategory(content: string): string {
   
   return 'Creative'; // Default
 }
-
