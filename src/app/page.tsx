@@ -241,11 +241,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               <img 
-                src="/logo.svg" 
+                src="/logo.png" 
                 alt="PromptVault" 
-                className="h-10 w-auto"
+                className="h-12 w-auto"
               />
             </div>
 
