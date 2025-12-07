@@ -39,8 +39,12 @@ export async function POST(request: NextRequest) {
       }, { headers: corsHeaders });
     }
 
+    console.log('Initializing Gemini with key:', geminiKey.substring(0, 10) + '...');
+    
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    console.log('Gemini model initialized, sending request...');
 
     // Fetch existing categories from database
     const supabase = await createClient();
@@ -76,9 +80,12 @@ IMPORTANT: Respond ONLY with valid JSON, no markdown, no code blocks:
 Analyze this prompt:
 ${content.slice(0, 2000)}`;
 
+    console.log('Calling Gemini API...');
     const result = await model.generateContent(prompt);
+    console.log('Gemini response received');
     const response = await result.response;
     const analysisText = response.text().trim();
+    console.log('Gemini raw response:', analysisText.substring(0, 200));
     
     // Clean up the response (remove markdown code blocks if present)
     let cleanedText = analysisText;
@@ -123,7 +130,11 @@ ${content.slice(0, 2000)}`;
   } catch (error) {
     console.error('Error in AI analysis:', error);
     
-    // Return basic analysis on error
+    // Get the actual error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('AI Error Details:', errorMessage);
+    
+    // Return basic analysis on error with detailed error
     let content = '';
     let source = '';
     try {
@@ -138,7 +149,7 @@ ${content.slice(0, 2000)}`;
       category: detectCategory(content),
       effectiveness_score: null,
       ai_powered: false,
-      error: 'AI analysis failed, using basic analysis'
+      error: `AI analysis failed: ${errorMessage}`
     }, { headers: corsHeaders });
   }
 }
