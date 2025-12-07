@@ -84,11 +84,12 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
-            <Vault className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-zinc-100">PromptVault</h1>
-          <p className="text-zinc-500 mt-2">Your prompt engineering companion</p>
+          <img 
+            src="/logo.png" 
+            alt="PromptVault" 
+            className="h-16 w-auto mx-auto mb-4"
+          />
+          <p className="text-zinc-500">Your prompt engineering companion</p>
         </div>
 
         {/* Auth Card */}

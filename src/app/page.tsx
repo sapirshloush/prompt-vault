@@ -242,13 +242,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Vault className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-zinc-100">PromptVault</h1>
-                <p className="text-xs text-zinc-500">Your prompt engineering companion</p>
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="PromptVault" 
+                className="h-10 w-auto"
+              />
             </div>
 
             {/* Right Side - Add Prompt + User Menu */}

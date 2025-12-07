@@ -15,9 +15,11 @@ export default function ExtensionAuthSuccessPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10" />
       
       <div className="relative w-full max-w-md text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-6">
-          <Vault className="w-8 h-8 text-white" />
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="PromptVault" 
+          className="h-14 w-auto mx-auto mb-6"
+        />
 
         <CheckCircle className="w-20 h-20 text-emerald-500 mx-auto mb-6" />
         
