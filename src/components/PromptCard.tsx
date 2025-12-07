@@ -70,13 +70,13 @@ export function PromptCard({
   };
 
   return (
-    <Card className="group relative bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-all duration-200 hover:shadow-lg hover:shadow-zinc-900/50">
+    <Card className="group relative bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-all duration-200 hover:shadow-lg hover:shadow-zinc-900/50 overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{sourceInfo.icon}</span>
-              <h3 className="font-semibold text-zinc-100 truncate">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-2 mb-1 overflow-hidden">
+              <span className="text-lg flex-shrink-0">{sourceInfo.icon}</span>
+              <h3 className="font-semibold text-zinc-100 truncate flex-1 min-w-0">
                 {prompt.title}
               </h3>
               {prompt.is_favorite && (
@@ -153,23 +153,31 @@ export function PromptCard({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
-        <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed">
+      <CardContent className="space-y-3 overflow-hidden">
+        <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed break-words">
           {prompt.content}
         </p>
         
         {/* Tags */}
         {prompt.tags && prompt.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {prompt.tags.map((tag) => (
+          <div className="flex flex-wrap gap-1.5 overflow-hidden">
+            {prompt.tags.slice(0, 4).map((tag) => (
               <Badge 
                 key={tag.id} 
                 variant="outline"
-                className="text-xs px-2 py-0 border-zinc-700 text-zinc-500 hover:border-zinc-600"
+                className="text-xs px-2 py-0 border-zinc-700 text-zinc-500 hover:border-zinc-600 truncate max-w-[120px]"
               >
                 #{tag.name}
               </Badge>
             ))}
+            {prompt.tags.length > 4 && (
+              <Badge 
+                variant="outline"
+                className="text-xs px-2 py-0 border-zinc-700 text-zinc-500"
+              >
+                +{prompt.tags.length - 4}
+              </Badge>
+            )}
           </div>
         )}
         

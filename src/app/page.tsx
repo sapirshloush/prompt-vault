@@ -240,6 +240,7 @@ export default function Home() {
       <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
+            {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Vault className="w-5 h-5 text-white" />
@@ -250,24 +251,26 @@ export default function Home() {
               </div>
             </div>
 
-            <Button 
-              onClick={() => {
-                setEditingPrompt(null);
-                setPromptDialogOpen(true);
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Prompt
-            </Button>
+            {/* Right Side - Add Prompt + User Menu */}
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => {
+                  setEditingPrompt(null);
+                  setPromptDialogOpen(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Prompt
+              </Button>
 
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-2 text-zinc-400 hover:text-zinc-100">
-                  <User className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                    <User className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
                 <div className="px-3 py-2 border-b border-zinc-800">
                   <p className="text-xs text-zinc-500">Signed in as</p>
@@ -284,6 +287,7 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
