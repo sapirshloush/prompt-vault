@@ -45,14 +45,14 @@
 
 /* Dialog */
 .pv-dialog {
-  background: #18181b;
+  background: #232339;
   border-radius: 16px;
   width: 480px;
   max-width: 90vw;
   max-height: 90vh;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  border: 1px solid #27272a;
+  border: 1px solid #3f3f5a;
   animation: pv-slide-up 0.3s ease-out;
 }
 
@@ -62,8 +62,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #27272a;
-  background: #09090b;
+  border-bottom: 1px solid #3f3f5a;
+  background: #1a1a2e;
 }
 
 .pv-logo {
@@ -124,8 +124,8 @@
 .pv-field select {
   width: 100%;
   padding: 10px 12px;
-  background: #27272a !important;
-  border: 1px solid #3f3f46;
+  background: #1a1a2e !important;
+  border: 1px solid #3f3f5a;
   border-radius: 8px;
   color: #ffffff !important;
   font-size: 14px;
@@ -164,7 +164,7 @@
 }
 
 .pv-field select option {
-  background: #27272a;
+  background: #1a1a2e;
   color: #ffffff;
   padding: 10px;
 }
@@ -211,8 +211,8 @@
 
 .pv-tag-chip {
   padding: 4px 10px;
-  background: #27272a;
-  border: 1px solid #3f3f46;
+  background: #2d2d47;
+  border: 1px solid #3f3f5a;
   border-radius: 100px;
   color: #a1a1aa;
   font-size: 12px;
@@ -238,8 +238,8 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 20px;
-  border-top: 1px solid #27272a;
-  background: #09090b;
+  border-top: 1px solid #3f3f5a;
+  background: #1a1a2e;
 }
 
 .pv-btn {
@@ -264,8 +264,9 @@
 }
 
 .pv-btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  background: linear-gradient(122deg, #ffd7a5, #ff9a9a 62%, #ff7676);
+  color: #1a1a2e;
+  font-weight: 600;
 }
 
 .pv-btn-primary:hover {
