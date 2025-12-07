@@ -158,9 +158,21 @@ async function showSaveDialog(text, source) {
     
     if (catResponse?.success) categories = catResponse.categories;
     if (tagResponse?.success) tags = tagResponse.tags;
-    if (aiResponse?.success) aiAnalysis = aiResponse.analysis;
     
-    console.log('[PromptVault] AI Analysis:', aiAnalysis);
+    // AI response is the analysis object directly (not wrapped in .analysis)
+    if (aiResponse?.success && aiResponse.analysis) {
+      aiAnalysis = aiResponse.analysis;
+      console.log('[PromptVault] ✅ AI Analysis successful:', aiAnalysis);
+    } else if (aiResponse?.title) {
+      // Direct response from API (not wrapped)
+      aiAnalysis = aiResponse;
+      console.log('[PromptVault] ✅ AI Analysis (direct):', aiAnalysis);
+    } else {
+      console.log('[PromptVault] ❌ AI Analysis failed or returned basic:', aiResponse);
+    }
+    
+    // Log for debugging
+    console.log('[PromptVault] AI Response:', aiResponse);
   } catch (e) {
     console.error('Failed to fetch data:', e);
   }
