@@ -120,3 +120,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Prompt Card Styles */
+.prompt-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
+}
