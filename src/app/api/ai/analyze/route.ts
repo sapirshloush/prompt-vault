@@ -63,21 +63,32 @@ export async function POST(request: NextRequest) {
     
     const existingTagsList = existingTags?.map(t => t.name).join(', ') || '';
 
-    const prompt = `You are an expert prompt analyst. Analyze the given prompt and provide:
-1. A concise, descriptive title (max 60 characters)
-2. 3-5 relevant tags (lowercase, single words or hyphenated)
-3. The best matching category from: ${categoryList}
-4. An effectiveness score (1-10) based on clarity, specificity, and likely results
-5. A brief reason for your effectiveness score (max 100 characters)
+    const prompt = `You are a STRICT prompt engineering expert. Analyze the given prompt with RIGOROUS scoring.
 
-Consider existing tags for consistency: ${existingTagsList}
+SCORING RUBRIC (be harsh and honest):
+- 1-3: Vague, unclear, would produce poor/random results
+- 4-5: Basic prompt, missing important details or context
+- 6-7: Good prompt with clear intent, but could be more specific
+- 8: Very good prompt with specific details and clear structure
+- 9: Excellent prompt with advanced techniques (few-shot, chain-of-thought, etc.)
+- 10: Perfect prompt - only for exceptional, publication-worthy prompts
 
-The prompt was written for: ${source || 'unknown AI tool'}
+MOST prompts are 5-7. Reserve 8+ for truly excellent prompts. Be critical!
 
-IMPORTANT: Respond ONLY with valid JSON, no markdown, no code blocks:
+Analyze for:
+1. Title: concise, descriptive (max 60 chars)
+2. Tags: 3-5 relevant tags (lowercase)
+3. Category: best match from: ${categoryList}
+4. Score: 1-10 using the STRICT rubric above
+5. Reason: specific feedback on what's good/missing (max 100 chars)
+
+Existing tags: ${existingTagsList}
+Source: ${source || 'unknown'}
+
+IMPORTANT: Respond ONLY with valid JSON:
 {"title": "string", "tags": ["tag1", "tag2"], "category": "Category Name", "effectiveness_score": number, "effectiveness_reason": "string"}
 
-Analyze this prompt:
+Prompt to analyze:
 ${content.slice(0, 2000)}`;
 
     console.log('Calling Gemini API...');

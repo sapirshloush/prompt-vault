@@ -176,17 +176,26 @@ async function analyzePromptWithAI(content: string, source: string) {
   const { data: categories } = await supabase.from('categories').select('id, name');
   const categoryList = categories?.map(c => c.name).join(', ') || 'Copywriting, Coding, Analysis, Creative, Automation, Communication, Learning';
 
-  const prompt = `Analyze this prompt and provide:
-1. A concise title (max 60 chars)
-2. 3-5 relevant tags (lowercase)
-3. Best category from: ${categoryList}
-4. Effectiveness score (1-10)
-5. Brief reason for score (max 80 chars)
+  const prompt = `You are a STRICT prompt analyst. Score HARSHLY using this rubric:
+- 1-3: Vague, unclear
+- 4-5: Basic, missing details  
+- 6-7: Good but could be more specific
+- 8: Very good with clear structure
+- 9-10: Exceptional (rare!)
 
-Respond ONLY with JSON:
+MOST prompts are 5-7. Be critical!
+
+Provide:
+1. Title (max 60 chars)
+2. 3-5 tags (lowercase)
+3. Category from: ${categoryList}
+4. Score (1-10, use rubric!)
+5. Brief feedback (max 80 chars)
+
+JSON only:
 {"title": "string", "tags": ["tag1", "tag2"], "category": "Category Name", "effectiveness_score": number, "effectiveness_reason": "string"}
 
-Prompt to analyze:
+Analyze:
 ${content.slice(0, 1500)}`;
 
   const result = await model.generateContent(prompt);
