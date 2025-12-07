@@ -235,8 +235,18 @@ async function showSaveDialog(text, source) {
     saveDialog.remove();
   }
   
-  // Show loading dialog first
-  showLoadingDialog();
+  // Check if AI is enabled
+  const aiEnabled = await new Promise(resolve => {
+    chrome.storage.local.get(['ai_enabled'], (result) => {
+      // Default to enabled if not set
+      resolve(result.ai_enabled !== false);
+    });
+  });
+  
+  // Show loading dialog first (only if AI is enabled)
+  if (aiEnabled) {
+    showLoadingDialog();
+  }
   
   // Fetch categories, tags, and AI analysis in parallel
   let categories = [];
@@ -244,17 +254,30 @@ async function showSaveDialog(text, source) {
   let aiAnalysis = null;
   
   try {
-    const [catResponse, tagResponse, aiResponse] = await Promise.all([
+    // Build promises array - only include AI analysis if enabled
+    const promises = [
       new Promise(resolve => 
         chrome.runtime.sendMessage({ action: 'getCategories' }, resolve)
       ),
       new Promise(resolve => 
         chrome.runtime.sendMessage({ action: 'getTags' }, resolve)
-      ),
-      new Promise(resolve => 
-        chrome.runtime.sendMessage({ action: 'analyzePrompt', data: { content: text, source } }, resolve)
       )
-    ]);
+    ];
+    
+    // Only add AI analysis if enabled
+    if (aiEnabled) {
+      promises.push(
+        new Promise(resolve => 
+          chrome.runtime.sendMessage({ action: 'analyzePrompt', data: { content: text, source } }, resolve)
+        )
+      );
+    }
+    
+    const responses = await Promise.all(promises);
+    
+    const catResponse = responses[0];
+    const tagResponse = responses[1];
+    const aiResponse = aiEnabled ? responses[2] : null;
     
     if (catResponse?.success) categories = catResponse.categories;
     if (tagResponse?.success) tags = tagResponse.tags;
@@ -267,12 +290,16 @@ async function showSaveDialog(text, source) {
       // Direct response from API (not wrapped)
       aiAnalysis = aiResponse;
       console.log('[PromptVault] ✅ AI Analysis (direct):', aiAnalysis);
-    } else {
+    } else if (aiEnabled) {
       console.log('[PromptVault] ❌ AI Analysis failed or returned basic:', aiResponse);
+    } else {
+      console.log('[PromptVault] ℹ️ AI Analysis disabled by user');
     }
     
     // Log for debugging
-    console.log('[PromptVault] AI Response:', aiResponse);
+    if (aiEnabled) {
+      console.log('[PromptVault] AI Response:', aiResponse);
+    }
   } catch (e) {
     console.error('Failed to fetch data:', e);
   }

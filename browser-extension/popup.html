@@ -189,6 +189,123 @@
     .hidden {
       display: none !important;
     }
+    
+    /* Settings Section */
+    .settings {
+      background: #09090b;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .settings h3 {
+      font-size: 13px;
+      color: #a1a1aa;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #27272a;
+    }
+    
+    .setting-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    
+    .setting-info {
+      flex: 1;
+    }
+    
+    .setting-label {
+      font-size: 14px;
+      color: #f4f4f5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .setting-desc {
+      font-size: 11px;
+      color: #71717a;
+      margin-top: 2px;
+    }
+    
+    .pro-badge {
+      background: linear-gradient(122deg, #ffd7a5, #ff9a9a 62%, #ff7676);
+      color: #1a1a2e;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #3f3f46;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    
+    .toggle input:checked + .toggle-slider {
+      background: linear-gradient(122deg, #ffd7a5, #ff9a9a 62%, #ff7676);
+    }
+    
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    
+    .ai-usage {
+      font-size: 11px;
+      color: #71717a;
+      text-align: center;
+      margin-top: 8px;
+      padding: 8px;
+      background: #18181b;
+      border-radius: 6px;
+    }
+    
+    .ai-usage strong {
+      color: #ffd7a5;
+    }
   </style>
 </head>
 <body>
@@ -211,6 +328,27 @@
       <div class="auth-status logged-in">
         <div class="user-email" id="user-email">Loading...</div>
         <button class="btn btn-secondary" id="logout-btn">Sign Out</button>
+      </div>
+      
+      <!-- AI Settings -->
+      <div class="settings">
+        <h3>AI Features</h3>
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">
+              AI Analysis
+              <span class="pro-badge">PRO</span>
+            </div>
+            <div class="setting-desc">Auto-generate title, tags and score</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="ai-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="ai-usage" id="ai-usage">
+          <strong>Unlimited</strong> AI analyses (Pro)
+        </div>
       </div>
       
       <div class="instructions">
