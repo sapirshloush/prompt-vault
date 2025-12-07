@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🗃️ PromptVault
 
-## Getting Started
+> **Your Personal Prompt Engineering Companion**
 
-First, run the development server:
+Store, version control, and improve your AI prompts. Become a prompt engineering master.
+
+![PromptVault Dashboard](https://via.placeholder.com/800x400/18181b/6366f1?text=PromptVault+Dashboard)
+
+## ✨ Features
+
+- 📝 **Save & Organize** - Store prompts from ChatGPT, Gemini, Claude, Cursor, and more
+- 🔄 **Version Control** - Track every iteration of your prompts with full history
+- ⭐ **Rate Effectiveness** - Score your prompts 1-10 to find what works best
+- 🏷️ **Tags & Categories** - Organize with smart filtering and search
+- 📱 **Telegram Bot** - Save prompts on-the-go with quick commands
+- 🔍 **Powerful Search** - Find any prompt instantly with full-text search
+- 🎨 **Beautiful Dark UI** - Modern, clean interface that's easy on the eyes
+
+## 🚀 Quick Start
 
 ```bash
+# Clone and install
+git clone <your-repo>
+cd prompt-vault
+npm install
+
+# Add your Supabase credentials to .env.local
+# See SETUP.md for full instructions
+
+# Run!
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see your vault.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📖 Full Setup Guide
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [SETUP.md](./SETUP.md) for detailed instructions on:
+- Creating a free Supabase project
+- Setting up the database
+- Configuring the Telegram bot
+- Deploying to Vercel
 
-## Learn More
+## 🛠️ Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 15 (App Router)
+- **Database**: Supabase (PostgreSQL)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Bot**: Telegram Bot API
+- **Hosting**: Vercel (free tier)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📱 Telegram Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Once configured, use your bot with these commands:
 
-## Deploy on Vercel
+| Command | Description |
+|---------|-------------|
+| `/save [prompt]` | Save a new prompt |
+| `/search [query]` | Search your prompts |
+| `/recent` | View recent prompts |
+| `/stats` | See your statistics |
+| `/help` | Show all commands |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔮 Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [ ] AI auto-tagging with GPT-4
+- [ ] Semantic search with embeddings
+- [ ] Browser extension for quick capture
+- [ ] Prompt improvement suggestions
+- [ ] Export/share prompts
+- [ ] Multi-user support (SaaS mode)
+
+## 💡 Why PromptVault?
+
+Every time you write a great prompt, it's usually lost in your chat history. PromptVault lets you:
+
+1. **Capture** great prompts the moment you write them
+2. **Iterate** with version control to find what works
+3. **Learn** by rating and reviewing your prompt performance
+4. **Access** your best prompts from anywhere
+
+Stop losing your best work. Start building your prompt library.
+
+---
+
+Made with 💜 for prompt engineers everywhere

@@ -1,65 +1,431 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { PromptCard } from '@/components/PromptCard';
+import { PromptDialog } from '@/components/PromptDialog';
+import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
+import { Prompt, Category, Tag, Source, SOURCE_INFO } from '@/types/database';
+import { 
+  Search, 
+  Plus, 
+  Star, 
+  Sparkles,
+  Filter,
+  LayoutGrid,
+  List,
+  Vault
+} from 'lucide-react';
 
 export default function Home() {
+  // State
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Dialogs
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+  const [versionDialogOpen, setVersionDialogOpen] = useState(false);
+  const [versionPrompt, setVersionPrompt] = useState<Prompt | null>(null);
+
+  // Fetch data
+  const fetchPrompts = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set('query', searchQuery);
+      if (sourceFilter !== 'all') params.set('source', sourceFilter);
+      if (categoryFilter !== 'all') params.set('category_id', categoryFilter);
+      if (showFavorites) params.set('is_favorite', 'true');
+      if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
+
+      const res = await fetch(`/api/prompts?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch prompts');
+      const data = await res.json();
+      setPrompts(data.prompts || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load prompts');
+    }
+  }, [searchQuery, sourceFilter, categoryFilter, showFavorites, selectedTags]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
+  const fetchTags = async () => {
+    try {
+      const res = await fetch('/api/tags');
+      if (res.ok) {
+        const data = await res.json();
+        setTags(data.tags || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tags:', err);
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([fetchPrompts(), fetchCategories(), fetchTags()])
+      .finally(() => setLoading(false));
+  }, [fetchPrompts]);
+
+  // Handlers
+  const handleSavePrompt = async (data: {
+    title: string;
+    content: string;
+    source: Source;
+    category_id?: string;
+    effectiveness_score?: number;
+    tags?: string[];
+    is_favorite?: boolean;
+    change_notes?: string;
+  }) => {
+    try {
+      const url = editingPrompt ? `/api/prompts/${editingPrompt.id}` : '/api/prompts';
+      const method = editingPrompt ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) throw new Error('Failed to save prompt');
+
+      await fetchPrompts();
+      await fetchTags(); // Refresh tags in case new ones were created
+      setEditingPrompt(null);
+    } catch (err) {
+      console.error('Error saving prompt:', err);
+      alert('Failed to save prompt');
+    }
+  };
+
+  const handleDeletePrompt = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this prompt?')) return;
+
+    try {
+      const res = await fetch(`/api/prompts/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete prompt');
+      await fetchPrompts();
+    } catch (err) {
+      console.error('Error deleting prompt:', err);
+      alert('Failed to delete prompt');
+    }
+  };
+
+  const handleToggleFavorite = async (id: string, isFavorite: boolean) => {
+    try {
+      const res = await fetch(`/api/prompts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_favorite: isFavorite }),
+      });
+      if (!res.ok) throw new Error('Failed to update prompt');
+      await fetchPrompts();
+    } catch (err) {
+      console.error('Error updating favorite:', err);
+    }
+  };
+
+  const handleViewVersions = async (prompt: Prompt) => {
+    // Fetch full prompt with versions
+    try {
+      const res = await fetch(`/api/prompts/${prompt.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersionPrompt(data.prompt);
+        setVersionDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Error fetching versions:', err);
+    }
+  };
+
+  const handleEdit = (prompt: Prompt) => {
+    setEditingPrompt(prompt);
+    setPromptDialogOpen(true);
+  };
+
+  const toggleTag = (tagName: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tagName)
+        ? prev.filter(t => t !== tagName)
+        : [...prev, tagName]
+    );
+  };
+
+  // Stats
+  const stats = {
+    total: prompts.length,
+    favorites: prompts.filter(p => p.is_favorite).length,
+    thisWeek: prompts.filter(p => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return new Date(p.created_at) > weekAgo;
+    }).length,
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="animate-pulse text-zinc-400 flex items-center gap-3">
+          <Sparkles className="w-6 h-6 animate-spin" />
+          Loading your prompts...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      {/* Header */}
+      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Vault className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-zinc-100">PromptVault</h1>
+                <p className="text-xs text-zinc-500">Your prompt engineering companion</p>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => {
+                setEditingPrompt(null);
+                setPromptDialogOpen(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Prompt
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+            <div className="text-3xl font-bold text-zinc-100">{stats.total}</div>
+            <div className="text-sm text-zinc-500">Total Prompts</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+            <div className="text-3xl font-bold text-amber-400">{stats.favorites}</div>
+            <div className="text-sm text-zinc-500">Favorites</div>
+          </div>
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+            <div className="text-3xl font-bold text-emerald-400">{stats.thisWeek}</div>
+            <div className="text-sm text-zinc-500">Added This Week</div>
+          </div>
+        </div>
+
+        {/* Search & Filters */}
+        <div className="space-y-4 mb-8">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+            <Input
+              placeholder="Search prompts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 text-lg"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+
+          {/* Filter Row */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Source Filter */}
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-800 text-zinc-100">
+                <Filter className="w-4 h-4 mr-2 text-zinc-500" />
+                <SelectValue placeholder="All Sources" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectItem value="all" className="text-zinc-300">All Sources</SelectItem>
+                {Object.entries(SOURCE_INFO).map(([key, info]) => (
+                  <SelectItem key={key} value={key} className="text-zinc-300">
+                    {info.icon} {info.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Category Filter */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px] bg-zinc-900 border-zinc-800 text-zinc-100">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectItem value="all" className="text-zinc-300">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-zinc-300">
+                    {cat.icon} {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Favorites Toggle */}
+            <Button
+              variant={showFavorites ? "default" : "outline"}
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={showFavorites 
+                ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                : "border-zinc-700 text-zinc-400 hover:text-zinc-100"
+              }
+            >
+              <Star className={`w-4 h-4 mr-2 ${showFavorites ? 'fill-current' : ''}`} />
+              Favorites
+            </Button>
+
+            {/* View Toggle */}
+            <div className="ml-auto">
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'grid' | 'list')}>
+                <TabsList className="bg-zinc-900 border border-zinc-800">
+                  <TabsTrigger value="grid" className="data-[state=active]:bg-zinc-800">
+                    <LayoutGrid className="w-4 h-4" />
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="data-[state=active]:bg-zinc-800">
+                    <List className="w-4 h-4" />
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
+          {/* Tags Filter */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.slice(0, 15).map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant={selectedTags.includes(tag.name) ? "default" : "outline"}
+                  className={`cursor-pointer transition-colors ${
+                    selectedTags.includes(tag.name)
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+                  }`}
+                  onClick={() => toggleTag(tag.name)}
+                >
+                  #{tag.name}
+                </Badge>
+              ))}
+              {selectedTags.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedTags([])}
+                  className="text-zinc-500 hover:text-zinc-300 h-6 px-2"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-950/50 border border-red-900 rounded-xl p-4 mb-8 text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {prompts.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-10 h-10 text-zinc-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-zinc-300 mb-2">No prompts yet</h3>
+            <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+              Start building your prompt library! Add your first prompt to begin improving your prompt engineering skills.
+            </p>
+            <Button 
+              onClick={() => {
+                setEditingPrompt(null);
+                setPromptDialogOpen(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Prompt
+            </Button>
+          </div>
+        )}
+
+        {/* Prompts Grid/List */}
+        {prompts.length > 0 && (
+          <div className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+              : 'space-y-4'
+          }>
+            {prompts.map((prompt) => (
+              <PromptCard
+                key={prompt.id}
+                prompt={prompt}
+                onEdit={handleEdit}
+                onDelete={handleDeletePrompt}
+                onToggleFavorite={handleToggleFavorite}
+                onViewVersions={handleViewVersions}
+              />
+            ))}
+          </div>
+        )}
       </main>
+
+      {/* Dialogs */}
+      <PromptDialog
+        open={promptDialogOpen}
+        onOpenChange={(open) => {
+          setPromptDialogOpen(open);
+          if (!open) setEditingPrompt(null);
+        }}
+        prompt={editingPrompt}
+        categories={categories}
+        existingTags={tags}
+        onSave={handleSavePrompt}
+      />
+
+      <VersionHistoryDialog
+        open={versionDialogOpen}
+        onOpenChange={setVersionDialogOpen}
+        prompt={versionPrompt}
+      />
     </div>
   );
 }
