@@ -2,6 +2,7 @@
 
 let saveDialog = null;
 let floatingButton = null;
+let lastSelectedText = '';
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -12,24 +13,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Create floating save button on text selection
 document.addEventListener('mouseup', (e) => {
-  const selection = window.getSelection();
-  const selectedText = selection.toString().trim();
-  
-  if (selectedText.length > 20) { // Only show for meaningful selections
-    showFloatingButton(e.clientX, e.clientY, selectedText);
-  } else {
-    hideFloatingButton();
-  }
+  // Small delay to ensure selection is complete
+  setTimeout(() => {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+    
+    if (selectedText.length > 20) { // Only show for meaningful selections
+      lastSelectedText = selectedText; // Store the text
+      showFloatingButton(e.clientX, e.clientY, selectedText);
+    } else if (!floatingButton?.contains(e.target)) {
+      hideFloatingButton();
+    }
+  }, 10);
 });
 
-// Hide button when clicking elsewhere
+// Hide button when clicking elsewhere (but not on the button itself)
 document.addEventListener('mousedown', (e) => {
-  if (floatingButton && !floatingButton.contains(e.target)) {
-    hideFloatingButton();
+  // Don't hide if clicking on the floating button or save dialog
+  if (floatingButton && floatingButton.contains(e.target)) {
+    return;
   }
-  if (saveDialog && !saveDialog.contains(e.target)) {
-    // Don't hide dialog on outside click - let user close it explicitly
+  if (saveDialog && saveDialog.contains(e.target)) {
+    return;
   }
+  
+  // Small delay to allow button click to register
+  setTimeout(() => {
+    if (!saveDialog) {
+      hideFloatingButton();
+    }
+  }, 100);
 });
 
 function showFloatingButton(x, y, text) {
@@ -56,12 +69,29 @@ function showFloatingButton(x, y, text) {
   
   document.body.appendChild(floatingButton);
   
+  // Store text in a data attribute as backup
+  floatingButton.dataset.text = text;
+  
   // Add click handler
-  floatingButton.querySelector('#pv-save-btn').addEventListener('click', (e) => {
+  const saveBtn = floatingButton.querySelector('#pv-save-btn');
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     e.stopPropagation();
+    
+    // Use stored text (more reliable than re-reading selection)
+    const textToSave = lastSelectedText || floatingButton.dataset.text || text;
     const source = detectSourceFromUrl(window.location.href);
-    showSaveDialog(text, source);
+    
+    console.log('[PromptVault] Saving text:', textToSave.substring(0, 50) + '...');
+    
+    showSaveDialog(textToSave, source);
     hideFloatingButton();
+  });
+  
+  // Also handle mousedown to prevent selection loss
+  saveBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   });
 }
 
