@@ -150,7 +150,7 @@ function showFloatingButton(x, y, text) {
   floatingButton = document.createElement('div');
   floatingButton.id = 'promptvault-floating-btn';
   floatingButton.innerHTML = `
-    <button id="pv-save-btn">
+    <button id="pv-floating-save-btn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
         <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -172,7 +172,7 @@ function showFloatingButton(x, y, text) {
   floatingButton.dataset.text = text;
   
   // Add click handler
-  const saveBtn = floatingButton.querySelector('#pv-save-btn');
+  const saveBtn = floatingButton.querySelector('#pv-floating-save-btn');
   saveBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -387,7 +387,7 @@ async function showSaveDialog(text, source) {
         
         <div class="pv-footer">
           <button class="pv-btn pv-btn-secondary" id="pv-cancel-btn">Cancel</button>
-          <button class="pv-btn pv-btn-primary" id="pv-save-btn">
+          <button class="pv-btn pv-btn-primary" id="pv-dialog-save-btn">
             <span class="pv-btn-text">Save Prompt</span>
             <span class="pv-btn-loading" style="display:none;">Saving...</span>
           </button>
@@ -407,7 +407,7 @@ async function showSaveDialog(text, source) {
   // Event listeners
   document.getElementById('pv-close-btn').addEventListener('click', closeSaveDialog);
   document.getElementById('pv-cancel-btn').addEventListener('click', closeSaveDialog);
-  document.getElementById('pv-save-btn').addEventListener('click', handleSave);
+  document.getElementById('pv-dialog-save-btn').addEventListener('click', handleSave);
   
   // Star rating
   const stars = document.querySelectorAll('.pv-star');
@@ -463,12 +463,16 @@ function closeSaveDialog() {
 }
 
 async function handleSave() {
-  const title = document.getElementById('pv-title').value.trim();
-  const content = document.getElementById('pv-content').value.trim();
-  const source = document.getElementById('pv-source').value;
-  const categoryId = document.getElementById('pv-category').value;
-  const tagsInput = document.getElementById('pv-tags').value;
-  const score = parseInt(document.getElementById('pv-score').value);
+  console.log('[PromptVault] Save button clicked');
+  
+  const title = document.getElementById('pv-title')?.value?.trim() || '';
+  const content = document.getElementById('pv-content')?.value?.trim() || '';
+  const source = document.getElementById('pv-source')?.value || 'other';
+  const categoryId = document.getElementById('pv-category')?.value || '';
+  const tagsInput = document.getElementById('pv-tags')?.value || '';
+  const score = parseInt(document.getElementById('pv-score')?.value) || 0;
+  
+  console.log('[PromptVault] Form data:', { title, source, categoryId, score });
   
   if (!title || !content) {
     alert('Please enter a title and content');
@@ -477,7 +481,11 @@ async function handleSave() {
   
   const tags = tagsInput.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   
-  const saveBtn = document.getElementById('pv-save-btn');
+  const saveBtn = document.getElementById('pv-dialog-save-btn');
+  if (!saveBtn) {
+    console.error('[PromptVault] Save button not found');
+    return;
+  }
   const btnText = saveBtn.querySelector('.pv-btn-text');
   const btnLoading = saveBtn.querySelector('.pv-btn-loading');
   
@@ -486,39 +494,63 @@ async function handleSave() {
   btnLoading.style.display = 'inline';
   saveBtn.disabled = true;
   
+  // Build save data - only include category_id if it's a valid value
+  const saveData = {
+    title,
+    content,
+    source,
+    effectiveness_score: score > 0 ? score : null,
+    tags: tags.length > 0 ? tags : [],
+  };
+  
+  // Only add category_id if it looks like a valid UUID (not empty, not placeholder)
+  if (categoryId && categoryId.length > 10 && !categoryId.includes('undefined')) {
+    saveData.category_id = categoryId;
+  }
+  
+  console.log('[PromptVault] Sending save request:', saveData);
+  
   try {
     const response = await new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({
         action: 'savePrompt',
-        data: {
-          title,
-          content,
-          source,
-          category_id: categoryId || undefined,
-          effectiveness_score: score || undefined,
-          tags: tags.length > 0 ? tags : undefined,
-        }
+        data: saveData
       }, (response) => {
+        console.log('[PromptVault] Save response:', response);
+        
+        // Check for Chrome runtime errors
+        if (chrome.runtime.lastError) {
+          console.error('[PromptVault] Chrome runtime error:', chrome.runtime.lastError);
+          reject(new Error(chrome.runtime.lastError.message || 'Extension error'));
+          return;
+        }
+        
+        if (!response) {
+          reject(new Error('No response from extension'));
+          return;
+        }
+        
         if (response.success) {
           resolve(response.data);
         } else {
-          reject(new Error(response.error));
+          reject(new Error(response.error || 'Save failed'));
         }
       });
     });
     
     // Show success message
+    console.log('[PromptVault] Prompt saved successfully!');
     showNotification('✅ Prompt saved to PromptVault!');
     closeSaveDialog();
     
   } catch (error) {
-    console.error('Error saving prompt:', error);
-    alert('Failed to save prompt. Please try again.');
+    console.error('[PromptVault] Error saving prompt:', error);
+    alert('Failed to save: ' + (error.message || 'Unknown error'));
     
     // Reset button
-    btnText.style.display = 'inline';
-    btnLoading.style.display = 'none';
-    saveBtn.disabled = false;
+    if (btnText) btnText.style.display = 'inline';
+    if (btnLoading) btnLoading.style.display = 'none';
+    if (saveBtn) saveBtn.disabled = false;
   }
 }
 
