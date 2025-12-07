@@ -10,6 +10,7 @@ export interface Collection {
   icon: string;
   color: string;
   is_public: boolean;
+  share_token: string | null;
   created_at: string;
   updated_at: string;
   // Computed

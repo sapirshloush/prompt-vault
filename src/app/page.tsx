@@ -23,6 +23,7 @@ import { PromptCard } from '@/components/PromptCard';
 import { PromptDialog } from '@/components/PromptDialog';
 import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
 import { CollectionDialog } from '@/components/CollectionDialog';
+import { ShareCollectionDialog } from '@/components/ShareCollectionDialog';
 import { Prompt, Category, Tag, Collection, Source, SOURCE_INFO } from '@/types/database';
 import { 
   Search, 
@@ -39,7 +40,9 @@ import {
   Folder,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  Share2,
+  Globe
 } from 'lucide-react';
 
 export default function Home() {
@@ -72,6 +75,8 @@ export default function Home() {
   const [versionPrompt, setVersionPrompt] = useState<Prompt | null>(null);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharingCollection, setSharingCollection] = useState<Collection | null>(null);
 
   // Get current user
   useEffect(() => {
@@ -258,6 +263,11 @@ export default function Home() {
     }
   };
 
+  const handleShareCollection = (collection: Collection) => {
+    setSharingCollection(collection);
+    setShareDialogOpen(true);
+  };
+
   // Stats
   const stats = {
     total: prompts.length,
@@ -391,6 +401,9 @@ export default function Home() {
                 >
                   <span>{collection.icon}</span>
                   <span className="max-w-[120px] truncate">{collection.name}</span>
+                  {collection.is_public && collection.share_token && (
+                    <Globe className="w-3 h-3 text-emerald-400" />
+                  )}
                   <span className="text-xs opacity-70">{collection.prompt_count || 0}</span>
                 </button>
                 
@@ -402,6 +415,16 @@ export default function Home() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                    <DropdownMenuItem
+                      onClick={() => handleShareCollection(collection)}
+                      className="text-zinc-300 focus:bg-zinc-800 cursor-pointer"
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                      {collection.is_public && collection.share_token && (
+                        <Globe className="w-3 h-3 ml-auto text-emerald-400" />
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleEditCollection(collection)}
                       className="text-zinc-300 focus:bg-zinc-800 cursor-pointer"
@@ -623,6 +646,18 @@ export default function Home() {
         }}
         collection={editingCollection}
         onSave={() => {
+          fetchCollections();
+        }}
+      />
+
+      <ShareCollectionDialog
+        open={shareDialogOpen}
+        onOpenChange={(open) => {
+          setShareDialogOpen(open);
+          if (!open) setSharingCollection(null);
+        }}
+        collection={sharingCollection}
+        onUpdate={() => {
           fetchCollections();
         }}
       />
