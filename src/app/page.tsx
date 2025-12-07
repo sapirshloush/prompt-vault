@@ -271,7 +271,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-dashboard flex items-center justify-center">
         <div className="animate-pulse text-zinc-400 flex items-center gap-3">
           <Sparkles className="w-6 h-6 animate-spin" />
           Loading your prompts...
@@ -281,9 +281,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-dashboard text-zinc-100">
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-zinc-800 bg-[#232339]/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -306,7 +306,7 @@ export default function Home() {
                   setEditingPrompt(null);
                   setPromptDialogOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="btn-primary-gradient"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Prompt
@@ -566,7 +566,7 @@ export default function Home() {
                 setEditingPrompt(null);
                 setPromptDialogOpen(true);
               }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="btn-primary-gradient"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Your First Prompt

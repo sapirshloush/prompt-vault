@@ -129,3 +129,26 @@
   max-width: 100%;
   display: block;
 }
+
+/* Custom Background Color */
+.bg-dashboard {
+  background-color: #232339;
+}
+
+/* Custom Primary Button Gradient */
+.btn-primary-gradient {
+  background: linear-gradient(122deg, #ffd7a5, #ff9a9a 62%, #ff7676);
+  color: #1a1a2e;
+  font-weight: 600;
+  border: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.btn-primary-gradient:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-primary-gradient:active {
+  transform: translateY(0);
+}
