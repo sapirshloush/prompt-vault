@@ -2,6 +2,10 @@
 
 const API_URL = 'https://prompt-vault-ebon-psi.vercel.app';
 
+// Extension API Key - Set this to your key from Vercel environment variables
+// Generate a random string and add it to Vercel as EXTENSION_API_KEY
+const EXTENSION_KEY = 'pv-ext-your-secret-key-here';
+
 // Create context menu on install
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -72,16 +76,18 @@ function detectSource(url) {
 }
 
 async function savePrompt(data) {
-  const response = await fetch(`${API_URL}/api/prompts`, {
+  const response = await fetch(`${API_URL}/api/extension/save`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Extension-Key': EXTENSION_KEY,
     },
     body: JSON.stringify(data),
   });
   
   if (!response.ok) {
-    throw new Error('Failed to save prompt');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to save prompt');
   }
   
   return response.json();
