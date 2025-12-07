@@ -2,11 +2,51 @@
 
 const API_URL = 'https://prompt-vault-ebon-psi.vercel.app';
 
-// Extension API Key - Set this to your key from Vercel environment variables
-// Generate a random string and add it to Vercel as EXTENSION_API_KEY
-const EXTENSION_KEY = 'pv-ext-your-secret-key-here';
+// ============================================
+// AUTH MANAGEMENT
+// ============================================
 
-// Create context menu on install
+// Get stored auth data
+async function getAuthData() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['promptvault_auth'], (result) => {
+      resolve(result.promptvault_auth || null);
+    });
+  });
+}
+
+// Save auth data
+async function saveAuthData(authData) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ promptvault_auth: authData }, resolve);
+  });
+}
+
+// Clear auth data (logout)
+async function clearAuthData() {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(['promptvault_auth'], resolve);
+  });
+}
+
+// Check if user is authenticated
+async function isAuthenticated() {
+  const authData = await getAuthData();
+  if (!authData || !authData.token) return false;
+  
+  // Check if token is expired
+  if (authData.expiresAt && Date.now() / 1000 > authData.expiresAt) {
+    await clearAuthData();
+    return false;
+  }
+  
+  return true;
+}
+
+// ============================================
+// CONTEXT MENU
+// ============================================
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'save-to-promptvault',
@@ -15,15 +55,11 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Handle context menu click
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'save-to-promptvault' && info.selectionText) {
     const selectedText = info.selectionText.trim();
-    
-    // Detect source from URL
     const source = detectSource(tab.url);
     
-    // Send to content script to show the save dialog
     chrome.tabs.sendMessage(tab.id, {
       action: 'showSaveDialog',
       text: selectedText,
@@ -32,15 +68,57 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Handle messages from content script
+// ============================================
+// MESSAGE HANDLERS
+// ============================================
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  
+  // Check auth status
+  if (request.action === 'checkAuth') {
+    (async () => {
+      const authenticated = await isAuthenticated();
+      const authData = await getAuthData();
+      sendResponse({ 
+        authenticated, 
+        user: authenticated ? { email: authData?.email } : null 
+      });
+    })();
+    return true;
+  }
+  
+  // Handle login
+  if (request.action === 'login') {
+    chrome.tabs.create({ url: `${API_URL}/auth/extension` });
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  // Handle logout
+  if (request.action === 'logout') {
+    clearAuthData().then(() => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+  
+  // Save auth data from extension auth page
+  if (request.action === 'saveAuthData') {
+    saveAuthData(request.data).then(() => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+  
+  // Save prompt
   if (request.action === 'savePrompt') {
     savePrompt(request.data)
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
-    return true; // Keep channel open for async response
+    return true;
   }
   
+  // Get categories
   if (request.action === 'getCategories') {
     fetchCategories()
       .then(categories => sendResponse({ success: true, categories }))
@@ -48,6 +126,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  // Get tags
   if (request.action === 'getTags') {
     fetchTags()
       .then(tags => sendResponse({ success: true, tags }))
@@ -55,6 +134,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  // Analyze prompt
   if (request.action === 'analyzePrompt') {
     analyzePrompt(request.data)
       .then(analysis => sendResponse({ success: true, analysis }))
@@ -66,6 +146,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// ============================================
+// API FUNCTIONS
+// ============================================
+
 function detectSource(url) {
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) return 'chatgpt';
   if (url.includes('gemini.google.com')) return 'gemini';
@@ -76,17 +160,28 @@ function detectSource(url) {
 }
 
 async function savePrompt(data) {
-  const response = await fetch(`${API_URL}/api/extension/save`, {
+  const authData = await getAuthData();
+  
+  if (!authData || !authData.token) {
+    throw new Error('Please log in to save prompts');
+  }
+  
+  const response = await fetch(`${API_URL}/api/extension/auth-save`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Extension-Key': EXTENSION_KEY,
+      'Authorization': `Bearer ${authData.token}`,
     },
     body: JSON.stringify(data),
   });
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      // Token expired - clear auth
+      await clearAuthData();
+      throw new Error('Session expired. Please log in again.');
+    }
     throw new Error(error.error || 'Failed to save prompt');
   }
   
@@ -122,4 +217,3 @@ async function analyzePrompt(data) {
   
   return response.json();
 }
-

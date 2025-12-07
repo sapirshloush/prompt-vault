@@ -4,12 +4,111 @@ let saveDialog = null;
 let floatingButton = null;
 let lastSelectedText = '';
 
+// ============================================
+// AUTH CAPTURE - Detect when user completes login
+// ============================================
+
+// Check if we're on the auth success page
+if (window.location.href.includes('/auth/extension/success')) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const encodedData = urlParams.get('data');
+  
+  if (encodedData) {
+    try {
+      const authData = JSON.parse(atob(encodedData));
+      // Send auth data to background script
+      chrome.runtime.sendMessage({ 
+        action: 'saveAuthData', 
+        data: authData 
+      }, (response) => {
+        console.log('[PromptVault] Auth data saved:', response);
+      });
+    } catch (e) {
+      console.error('[PromptVault] Failed to parse auth data:', e);
+    }
+  }
+}
+
+// Also listen for postMessage from the auth page
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'PROMPTVAULT_AUTH') {
+    chrome.runtime.sendMessage({ 
+      action: 'saveAuthData', 
+      data: event.data.data 
+    });
+  }
+});
+
+// ============================================
+// MESSAGE HANDLERS
+// ============================================
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'showSaveDialog') {
-    showSaveDialog(request.text, request.source);
+    checkAuthAndShowDialog(request.text, request.source);
   }
 });
+
+// Check auth before showing dialog
+async function checkAuthAndShowDialog(text, source) {
+  chrome.runtime.sendMessage({ action: 'checkAuth' }, (response) => {
+    if (response && response.authenticated) {
+      showSaveDialog(text, source);
+    } else {
+      showLoginPrompt();
+    }
+  });
+}
+
+// Show login prompt if not authenticated
+function showLoginPrompt() {
+  if (saveDialog) saveDialog.remove();
+  
+  saveDialog = document.createElement('div');
+  saveDialog.id = 'promptvault-dialog';
+  saveDialog.innerHTML = `
+    <div class="pv-dialog-overlay">
+      <div class="pv-dialog" style="width: 360px; text-align: center;">
+        <div class="pv-header">
+          <div class="pv-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span>PromptVault</span>
+          </div>
+          <button class="pv-close" id="pv-close-btn">&times;</button>
+        </div>
+        
+        <div class="pv-body" style="padding: 30px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+          <h3 style="color: #f4f4f5; font-size: 18px; margin-bottom: 8px;">Login Required</h3>
+          <p style="color: #71717a; font-size: 14px; margin-bottom: 24px;">
+            Please log in to save prompts to your personal vault
+          </p>
+          <button id="pv-login-btn" class="pv-btn pv-btn-primary" style="width: 100%; padding: 14px;">
+            🔐 Log In to PromptVault
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(saveDialog);
+  
+  document.getElementById('pv-close-btn').addEventListener('click', () => {
+    saveDialog.remove();
+    saveDialog = null;
+  });
+  
+  document.getElementById('pv-login-btn').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'login' });
+    saveDialog.remove();
+    saveDialog = null;
+  });
+}
 
 // Create floating save button on text selection
 document.addEventListener('mouseup', (e) => {
@@ -84,7 +183,8 @@ function showFloatingButton(x, y, text) {
     
     console.log('[PromptVault] Saving text:', textToSave.substring(0, 50) + '...');
     
-    showSaveDialog(textToSave, source);
+    // Check auth before showing dialog
+    checkAuthAndShowDialog(textToSave, source);
     hideFloatingButton();
   });
   
