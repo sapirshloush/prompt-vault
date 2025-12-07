@@ -50,6 +50,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  if (request.action === 'analyzePrompt') {
+    analyzePrompt(request.data)
+      .then(analysis => sendResponse({ success: true, analysis }))
+      .catch(error => {
+        console.error('AI analysis error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
 });
 
 function detectSource(url) {
@@ -89,5 +99,21 @@ async function fetchTags() {
   if (!response.ok) throw new Error('Failed to fetch tags');
   const data = await response.json();
   return data.tags || [];
+}
+
+async function analyzePrompt(data) {
+  const response = await fetch(`${API_URL}/api/ai/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to analyze prompt');
+  }
+  
+  return response.json();
 }
 

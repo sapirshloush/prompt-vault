@@ -102,6 +102,25 @@ function hideFloatingButton() {
   }
 }
 
+function showLoadingDialog() {
+  saveDialog = document.createElement('div');
+  saveDialog.id = 'promptvault-dialog';
+  saveDialog.innerHTML = `
+    <div class="pv-dialog-overlay">
+      <div class="pv-dialog pv-loading-dialog">
+        <div class="pv-loading-content">
+          <div class="pv-loading-spinner"></div>
+          <div class="pv-loading-text">
+            <span class="pv-loading-title">🤖 AI is analyzing your prompt...</span>
+            <span class="pv-loading-subtitle">Generating title, tags, and suggestions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(saveDialog);
+}
+
 function detectSourceFromUrl(url) {
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) return 'chatgpt';
   if (url.includes('gemini.google.com')) return 'gemini';
@@ -116,27 +135,53 @@ async function showSaveDialog(text, source) {
     saveDialog.remove();
   }
   
-  // Fetch categories and tags
+  // Show loading dialog first
+  showLoadingDialog();
+  
+  // Fetch categories, tags, and AI analysis in parallel
   let categories = [];
   let tags = [];
+  let aiAnalysis = null;
   
   try {
-    const catResponse = await new Promise(resolve => 
-      chrome.runtime.sendMessage({ action: 'getCategories' }, resolve)
-    );
-    if (catResponse.success) categories = catResponse.categories;
+    const [catResponse, tagResponse, aiResponse] = await Promise.all([
+      new Promise(resolve => 
+        chrome.runtime.sendMessage({ action: 'getCategories' }, resolve)
+      ),
+      new Promise(resolve => 
+        chrome.runtime.sendMessage({ action: 'getTags' }, resolve)
+      ),
+      new Promise(resolve => 
+        chrome.runtime.sendMessage({ action: 'analyzePrompt', data: { content: text, source } }, resolve)
+      )
+    ]);
     
-    const tagResponse = await new Promise(resolve => 
-      chrome.runtime.sendMessage({ action: 'getTags' }, resolve)
-    );
-    if (tagResponse.success) tags = tagResponse.tags;
+    if (catResponse?.success) categories = catResponse.categories;
+    if (tagResponse?.success) tags = tagResponse.tags;
+    if (aiResponse?.success) aiAnalysis = aiResponse.analysis;
+    
+    console.log('[PromptVault] AI Analysis:', aiAnalysis);
   } catch (e) {
-    console.error('Failed to fetch categories/tags:', e);
+    console.error('Failed to fetch data:', e);
   }
   
-  // Generate title suggestion from first line
-  const firstLine = text.split('\n')[0];
-  const suggestedTitle = firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
+  // Remove loading dialog
+  if (saveDialog) {
+    saveDialog.remove();
+  }
+  
+  // Use AI suggestions or fallback to basic
+  const suggestedTitle = aiAnalysis?.title || generateBasicTitle(text);
+  const suggestedTags = aiAnalysis?.tags || [];
+  const suggestedCategory = aiAnalysis?.category_id || '';
+  const suggestedScore = aiAnalysis?.effectiveness_score || 0;
+  const effectivenessReason = aiAnalysis?.effectiveness_reason || '';
+  const isAiPowered = aiAnalysis?.ai_powered || false;
+  
+  function generateBasicTitle(content) {
+    const firstLine = content.split('\n')[0];
+    return firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
+  }
   
   // Source labels
   const sourceLabels = {
@@ -161,13 +206,21 @@ async function showSaveDialog(text, source) {
               <line x1="9" y1="21" x2="9" y2="9"></line>
             </svg>
             <span>Save to PromptVault</span>
+            ${isAiPowered ? '<span class="pv-ai-badge">🤖 AI</span>' : ''}
           </div>
           <button class="pv-close" id="pv-close-btn">&times;</button>
         </div>
         
+        ${isAiPowered && effectivenessReason ? `
+        <div class="pv-ai-insight">
+          <span class="pv-ai-icon">✨</span>
+          <span>${effectivenessReason}</span>
+        </div>
+        ` : ''}
+        
         <div class="pv-body">
           <div class="pv-field">
-            <label>Title</label>
+            <label>Title ${isAiPowered ? '<span class="pv-auto-tag">AI Generated</span>' : ''}</label>
             <input type="text" id="pv-title" value="${suggestedTitle.replace(/"/g, '&quot;')}" placeholder="Give your prompt a name...">
           </div>
           
@@ -187,36 +240,36 @@ async function showSaveDialog(text, source) {
             </div>
             
             <div class="pv-field pv-half">
-              <label>Category</label>
+              <label>Category ${isAiPowered && suggestedCategory ? '<span class="pv-auto-tag">AI</span>' : ''}</label>
               <select id="pv-category">
                 <option value="">No category</option>
                 ${categories.map(cat => 
-                  `<option value="${cat.id}">${cat.icon || ''} ${cat.name}</option>`
+                  `<option value="${cat.id}" ${cat.id === suggestedCategory ? 'selected' : ''}>${cat.icon || ''} ${cat.name}</option>`
                 ).join('')}
               </select>
             </div>
           </div>
           
           <div class="pv-field">
-            <label>Tags (comma separated)</label>
-            <input type="text" id="pv-tags" placeholder="hooks, copywriting, automation...">
+            <label>Tags ${isAiPowered && suggestedTags.length > 0 ? '<span class="pv-auto-tag">AI Suggested</span>' : ''}</label>
+            <input type="text" id="pv-tags" value="${suggestedTags.join(', ')}" placeholder="hooks, copywriting, automation...">
             ${tags.length > 0 ? `
               <div class="pv-tag-suggestions">
                 ${tags.slice(0, 8).map(tag => 
-                  `<span class="pv-tag-chip" data-tag="${tag.name}">#${tag.name}</span>`
+                  `<span class="pv-tag-chip ${suggestedTags.includes(tag.name) ? 'selected' : ''}" data-tag="${tag.name}">#${tag.name}</span>`
                 ).join('')}
               </div>
             ` : ''}
           </div>
           
           <div class="pv-field">
-            <label>Effectiveness (1-10)</label>
+            <label>Effectiveness (1-10) ${isAiPowered && suggestedScore ? '<span class="pv-auto-tag">AI: ' + suggestedScore + '/10</span>' : ''}</label>
             <div class="pv-stars" id="pv-stars">
               ${[1,2,3,4,5,6,7,8,9,10].map(n => 
-                `<span class="pv-star" data-score="${n}">★</span>`
+                `<span class="pv-star ${n <= suggestedScore ? 'active' : ''}" data-score="${n}">★</span>`
               ).join('')}
             </div>
-            <input type="hidden" id="pv-score" value="0">
+            <input type="hidden" id="pv-score" value="${suggestedScore || 0}">
           </div>
         </div>
         
