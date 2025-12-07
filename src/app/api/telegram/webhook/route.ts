@@ -68,11 +68,25 @@ async function sendMessage(chatId: number, text: string, botToken: string) {
 
 async function handleSaveCommand(chatId: number, content: string, botToken: string) {
   try {
+    // Send "analyzing" message
+    await sendMessage(chatId, '🤖 <i>AI is analyzing your prompt...</i>', botToken);
+    
     const supabase = await createClient();
     
-    // Generate a title from the first line or first 50 chars
-    const firstLine = content.split('\n')[0];
-    const title = firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
+    // Try AI analysis first
+    let aiAnalysis = null;
+    try {
+      aiAnalysis = await analyzePromptWithAI(content, 'telegram');
+    } catch (e) {
+      console.error('AI analysis failed:', e);
+    }
+    
+    // Use AI results or fallback to basic
+    const title = aiAnalysis?.title || generateBasicTitle(content);
+    const tags = aiAnalysis?.tags || [];
+    const categoryId = aiAnalysis?.category_id || null;
+    const effectivenessScore = aiAnalysis?.effectiveness_score || null;
+    const isAiPowered = aiAnalysis?.ai_powered || false;
 
     // Create the prompt
     const { data: prompt, error } = await supabase
@@ -80,7 +94,9 @@ async function handleSaveCommand(chatId: number, content: string, botToken: stri
       .insert({
         title,
         content,
-        source: 'other', // Default to 'other' from Telegram
+        source: 'other',
+        category_id: categoryId,
+        effectiveness_score: effectivenessScore,
         current_version: 1,
       })
       .select()
@@ -95,18 +111,107 @@ async function handleSaveCommand(chatId: number, content: string, botToken: stri
         prompt_id: prompt.id,
         version_number: 1,
         content,
+        effectiveness_score: effectivenessScore,
         change_notes: 'Saved via Telegram',
       });
 
+    // Handle tags
+    if (tags.length > 0) {
+      for (const tagName of tags) {
+        let { data: tag } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('name', tagName.toLowerCase())
+          .single();
+
+        if (!tag) {
+          const { data: newTag } = await supabase
+            .from('tags')
+            .insert({ name: tagName.toLowerCase() })
+            .select('id')
+            .single();
+          tag = newTag;
+        }
+
+        if (tag) {
+          await supabase
+            .from('prompt_tags')
+            .insert({ prompt_id: prompt.id, tag_id: tag.id });
+        }
+      }
+    }
+
+    // Build response message
+    const tagsDisplay = tags.length > 0 ? `\n🏷️ <b>Tags:</b> ${tags.map(t => `#${t}`).join(' ')}` : '';
+    const scoreDisplay = effectivenessScore ? `\n⭐ <b>Score:</b> ${effectivenessScore}/10` : '';
+    const aiIndicator = isAiPowered ? ' 🤖' : '';
+    const reasonDisplay = aiAnalysis?.effectiveness_reason ? `\n💡 <i>${aiAnalysis.effectiveness_reason}</i>` : '';
+
     await sendMessage(
       chatId,
-      `✅ <b>Prompt saved!</b>\n\n📝 <b>Title:</b> ${title}\n\n💡 <i>Tip: Open the dashboard to add tags, category, and rate effectiveness.</i>`,
+      `✅ <b>Prompt saved!${aiIndicator}</b>\n\n📝 <b>Title:</b> ${title}${tagsDisplay}${scoreDisplay}${reasonDisplay}`,
       botToken
     );
   } catch (error) {
     console.error('Error saving prompt:', error);
     await sendMessage(chatId, '❌ Failed to save prompt. Please try again.', botToken);
   }
+}
+
+function generateBasicTitle(content: string): string {
+  const firstLine = content.split('\n')[0];
+  return firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
+}
+
+async function analyzePromptWithAI(content: string, source: string) {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) return null;
+
+  const genAI = new GoogleGenerativeAI(geminiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const supabase = await createClient();
+  const { data: categories } = await supabase.from('categories').select('id, name');
+  const categoryList = categories?.map(c => c.name).join(', ') || 'Copywriting, Coding, Analysis, Creative, Automation, Communication, Learning';
+
+  const prompt = `Analyze this prompt and provide:
+1. A concise title (max 60 chars)
+2. 3-5 relevant tags (lowercase)
+3. Best category from: ${categoryList}
+4. Effectiveness score (1-10)
+5. Brief reason for score (max 80 chars)
+
+Respond ONLY with JSON:
+{"title": "string", "tags": ["tag1", "tag2"], "category": "Category Name", "effectiveness_score": number, "effectiveness_reason": "string"}
+
+Prompt to analyze:
+${content.slice(0, 1500)}`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  let text = response.text().trim();
+  
+  // Clean markdown
+  if (text.startsWith('```json')) text = text.slice(7);
+  if (text.startsWith('```')) text = text.slice(3);
+  if (text.endsWith('```')) text = text.slice(0, -3);
+  
+  const analysis = JSON.parse(text.trim());
+  
+  // Match category ID
+  let categoryId = null;
+  if (analysis.category && categories) {
+    const matched = categories.find(c => c.name.toLowerCase() === analysis.category.toLowerCase());
+    categoryId = matched?.id || null;
+  }
+
+  return {
+    ...analysis,
+    category_id: categoryId,
+    ai_powered: true
+  };
 }
 
 async function handleSearchCommand(chatId: number, query: string, botToken: string) {
