@@ -142,7 +142,7 @@ async function handleSaveCommand(chatId: number, content: string, botToken: stri
     }
 
     // Build response message
-    const tagsDisplay = tags.length > 0 ? `\n🏷️ <b>Tags:</b> ${tags.map(t => `#${t}`).join(' ')}` : '';
+    const tagsDisplay = tags.length > 0 ? `\n🏷️ <b>Tags:</b> ${tags.map((t: string) => `#${t}`).join(' ')}` : '';
     const scoreDisplay = effectivenessScore ? `\n⭐ <b>Score:</b> ${effectivenessScore}/10` : '';
     const aiIndicator = isAiPowered ? ' 🤖' : '';
     const reasonDisplay = aiAnalysis?.effectiveness_reason ? `\n💡 <i>${aiAnalysis.effectiveness_reason}</i>` : '';
