@@ -289,7 +289,7 @@ export default function Home() {
             {/* Logo */}
             <div className="flex items-center gap-3">
               <img 
-                src="/logo-icon.svg" 
+                src="/logo.svg" 
                 alt="PromptVault Icon" 
                 className="h-10 w-10"
               />

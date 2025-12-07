@@ -85,7 +85,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img 
-            src="/logo-icon.svg" 
+            src="/logo.svg" 
             alt="PromptVault Icon" 
             className="h-20 w-20 mx-auto mb-4"
           />
