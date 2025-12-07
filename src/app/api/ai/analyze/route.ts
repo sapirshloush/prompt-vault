@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
     console.log('Initializing Gemini with key:', geminiKey.substring(0, 10) + '...');
     
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Use gemini-pro (stable) - gemini-1.5-flash requires different API version
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
     console.log('Gemini model initialized, sending request...');
 
