@@ -337,6 +337,13 @@ export default function Home() {
                   </p>
                 </div>
                 <DropdownMenuItem 
+                  onClick={() => window.location.href = '/billing'}
+                  className="text-amber-400 focus:bg-amber-950 focus:text-amber-300 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Upgrade to Pro
+                </DropdownMenuItem>
+                <DropdownMenuItem 
                   onClick={handleLogout}
                   className="text-red-400 focus:bg-red-950 focus:text-red-300 cursor-pointer"
                 >

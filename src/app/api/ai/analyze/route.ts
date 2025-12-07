@@ -25,6 +25,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = await createClient();
+    
+    // Check user subscription
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Get subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const isPro = subscription?.plan_type === 'pro' || subscription?.plan_type === 'lifetime';
+      
+      if (!isPro && subscription) {
+        // Check if free user has remaining AI uses
+        const used = subscription.ai_analyses_used || 0;
+        const limit = subscription.ai_analyses_limit || 10;
+        
+        if (used >= limit) {
+          return NextResponse.json({
+            title: generateBasicTitle(content),
+            tags: generateBasicTags(content, source),
+            category: detectCategory(content),
+            effectiveness_score: null,
+            ai_powered: false,
+            upgrade_required: true,
+            message: 'AI limit reached. Upgrade to Pro for unlimited AI analysis.',
+            uses_remaining: 0,
+          }, { headers: corsHeaders });
+        }
+        
+        // Increment usage for free users
+        await supabase
+          .from('subscriptions')
+          .update({ 
+            ai_analyses_used: used + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+      }
+    }
+
     const geminiKey = process.env.GEMINI_API_KEY;
     
     if (!geminiKey) {
@@ -45,9 +89,6 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     console.log('Gemini model initialized, sending request...');
-
-    // Fetch existing categories from database
-    const supabase = await createClient();
     const { data: categories } = await supabase
       .from('categories')
       .select('id, name');
