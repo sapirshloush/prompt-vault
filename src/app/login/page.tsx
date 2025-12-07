@@ -85,11 +85,12 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img 
-            src="/logo.png" 
-            alt="PromptVault" 
-            className="h-20 w-auto mx-auto mb-4"
+            src="/logo-icon.svg" 
+            alt="PromptVault Icon" 
+            className="h-20 w-20 mx-auto mb-4"
           />
-          <p className="text-zinc-500">Your prompt engineering companion</p>
+          <h1 className="text-3xl font-bold text-zinc-100">PromptVault</h1>
+          <p className="text-zinc-500 mt-2">Your prompt engineering companion</p>
         </div>
 
         {/* Auth Card */}

@@ -74,10 +74,11 @@ export default function ExtensionAuthPage() {
       
       <div className="relative w-full max-w-md text-center">
         <img 
-          src="/logo.png" 
+          src="/logo-icon.svg" 
           alt="PromptVault" 
-          className="h-16 w-auto mx-auto mb-6"
+          className="h-16 w-16 mx-auto mb-4"
         />
+        <h2 className="text-xl font-bold text-zinc-100 mb-6">PromptVault</h2>
 
         {status === 'loading' && (
           <>
