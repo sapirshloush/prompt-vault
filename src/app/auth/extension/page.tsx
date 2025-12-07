@@ -69,7 +69,7 @@ export default function ExtensionAuthPage() {
   }, [supabase.auth]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-dashboard flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10" />
       
       <div className="relative w-full max-w-md text-center">
@@ -99,7 +99,7 @@ export default function ExtensionAuthPage() {
             <p className="text-zinc-500 mb-6">{message}</p>
             <Button
               onClick={() => window.close()}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="btn-primary-gradient px-8"
             >
               Close Window
             </Button>
@@ -115,7 +115,7 @@ export default function ExtensionAuthPage() {
             <p className="text-zinc-500 mb-6">{message}</p>
             <Button
               onClick={() => window.location.href = '/login?redirect=/auth/extension'}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="btn-primary-gradient px-8"
             >
               Try Again
             </Button>
