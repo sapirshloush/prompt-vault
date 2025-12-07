@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { CreatePromptRequest, SearchPromptsRequest } from '@/types/database';
 
+// CORS headers for browser extension
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request for CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // GET /api/prompts - List all prompts with optional filters
 export async function GET(request: NextRequest) {
   try {
@@ -67,10 +79,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ prompts: filteredPrompts });
+    return NextResponse.json({ prompts: filteredPrompts }, { headers: corsHeaders });
   } catch (error) {
     console.error('Error in GET /api/prompts:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -85,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (!title || !content || !source) {
       return NextResponse.json(
         { error: 'Title, content, and source are required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -106,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (promptError) {
       console.error('Error creating prompt:', promptError);
-      return NextResponse.json({ error: promptError.message }, { status: 500 });
+      return NextResponse.json({ error: promptError.message }, { status: 500, headers: corsHeaders });
     }
 
     // Create the first version
@@ -151,10 +163,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ prompt }, { status: 201 });
+    return NextResponse.json({ prompt }, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error('Error in POST /api/prompts:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders });
   }
 }
 

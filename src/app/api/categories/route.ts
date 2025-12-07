@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// CORS headers for browser extension
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // GET /api/categories - List all categories
 export async function GET() {
   try {
@@ -12,13 +23,13 @@ export async function GET() {
       .order('name');
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
     }
 
-    return NextResponse.json({ categories });
+    return NextResponse.json({ categories }, { headers: corsHeaders });
   } catch (error) {
     console.error('Error in GET /api/categories:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: corsHeaders });
   }
 }
 
