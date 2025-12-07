@@ -16,7 +16,7 @@ export default function ExtensionAuthSuccessPage() {
       
       <div className="relative w-full max-w-md text-center">
         <img 
-          src="/logo.png" 
+          src="/logo.svg" 
           alt="PromptVault" 
           className="h-14 w-auto mx-auto mb-6"
         />
