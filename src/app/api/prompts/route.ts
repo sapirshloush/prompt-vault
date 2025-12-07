@@ -18,6 +18,13 @@ export async function OPTIONS() {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    
+    // Get current user (RLS will automatically filter, but we check for auth)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+    
     const { searchParams } = new URL(request.url);
     
     const query = searchParams.get('query');
@@ -90,6 +97,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+    
     const body: CreatePromptRequest = await request.json();
 
     const { title, content, source, category_id, effectiveness_score, tags, is_favorite } = body;
@@ -101,7 +115,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the prompt
+    // Create the prompt with user_id
     const { data: prompt, error: promptError } = await supabase
       .from('prompts')
       .insert({
@@ -112,6 +126,7 @@ export async function POST(request: NextRequest) {
         effectiveness_score: effectiveness_score || null,
         is_favorite: is_favorite || false,
         current_version: 1,
+        user_id: user.id,
       })
       .select()
       .single();
@@ -130,6 +145,7 @@ export async function POST(request: NextRequest) {
         content,
         effectiveness_score: effectiveness_score || null,
         change_notes: 'Initial version',
+        user_id: user.id,
       });
 
     if (versionError) {

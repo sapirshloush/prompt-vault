@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PromptCard } from '@/components/PromptCard';
 import { PromptDialog } from '@/components/PromptDialog';
 import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
@@ -24,10 +31,17 @@ import {
   Filter,
   LayoutGrid,
   List,
-  Vault
+  Vault,
+  LogOut,
+  User
 } from 'lucide-react';
 
 export default function Home() {
+  const supabase = createClient();
+  
+  // User state
+  const [user, setUser] = useState<{ email?: string } | null>(null);
+  
   // State
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,6 +62,21 @@ export default function Home() {
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
   const [versionPrompt, setVersionPrompt] = useState<Prompt | null>(null);
+
+  // Get current user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, [supabase.auth]);
+
+  // Logout handler
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
   // Fetch data
   const fetchPrompts = useCallback(async () => {
@@ -231,6 +260,30 @@ export default function Home() {
               <Plus className="w-4 h-4 mr-2" />
               Add Prompt
             </Button>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-2 text-zinc-400 hover:text-zinc-100">
+                  <User className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                <div className="px-3 py-2 border-b border-zinc-800">
+                  <p className="text-xs text-zinc-500">Signed in as</p>
+                  <p className="text-sm text-zinc-300 truncate max-w-[200px]">
+                    {user?.email || 'User'}
+                  </p>
+                </div>
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="text-red-400 focus:bg-red-950 focus:text-red-300 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
