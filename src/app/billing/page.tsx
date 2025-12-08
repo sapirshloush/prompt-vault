@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
@@ -23,7 +23,8 @@ interface Subscription {
   cancel_at_period_end?: boolean;
 }
 
-export default function BillingPage() {
+// Separate component that uses useSearchParams
+function BillingContent() {
   const searchParams = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -314,3 +315,15 @@ export default function BillingPage() {
   );
 }
 
+// Wrap in Suspense for useSearchParams
+export default function BillingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-dashboard flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      </div>
+    }>
+      <BillingContent />
+    </Suspense>
+  );
+}
