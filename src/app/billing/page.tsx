@@ -54,11 +54,11 @@ export default function BillingPage() {
   const handleUpgrade = async () => {
     setCheckoutLoading(true);
     try {
-      const res = await fetch('/api/stripe/checkout', {
+      const res = await fetch('/api/lemonsqueezy/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+          variantId: process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID,
         }),
       });
 
@@ -79,7 +79,7 @@ export default function BillingPage() {
   const handleManageBilling = async () => {
     setPortalLoading(true);
     try {
-      const res = await fetch('/api/stripe/portal', {
+      const res = await fetch('/api/lemonsqueezy/portal', {
         method: 'POST',
       });
 
