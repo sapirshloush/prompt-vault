@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const webhookSecret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET!;
+// Lazy initialization to avoid build-time errors
+let supabase: SupabaseClient | null = null;
 
-// Use service role for webhook (bypasses RLS)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 // Verify webhook signature
 function verifySignature(payload: string, signature: string): boolean {
+  const webhookSecret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET!;
   const hmac = crypto.createHmac('sha256', webhookSecret);
   const digest = hmac.update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
@@ -88,7 +94,7 @@ async function handleSubscriptionUpdate(event: any, userId: string) {
 
   const status = mapStatus(subscription.status);
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('subscriptions')
     .upsert({
       user_id: userId,
@@ -113,7 +119,7 @@ async function handleSubscriptionUpdate(event: any, userId: string) {
 async function handleSubscriptionCanceled(event: any, userId: string) {
   if (!userId) return;
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('subscriptions')
     .update({
       plan_type: 'free',
@@ -132,7 +138,7 @@ async function handleSubscriptionCanceled(event: any, userId: string) {
 async function handleSubscriptionResumed(event: any, userId: string) {
   if (!userId) return;
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('subscriptions')
     .update({
       plan_type: 'pro',
@@ -152,7 +158,7 @@ async function handlePaymentSuccess(event: any, userId: string) {
   if (!userId) return;
 
   // Reset AI usage on successful payment
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('subscriptions')
     .update({
       ai_analyses_used: 0,
@@ -169,7 +175,7 @@ async function handlePaymentSuccess(event: any, userId: string) {
 async function handlePaymentFailed(event: any, userId: string) {
   if (!userId) return;
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('subscriptions')
     .update({
       status: 'past_due',
